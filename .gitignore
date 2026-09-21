@@ -1,0 +1,12 @@
+node_modules/
+.next/
+.vercel
+
+.env*
+!.env.example
+
+*.tsbuildinfo
+.playwright-mcp/
+.DS_Store
+npm-debug.log*
+.cursor/

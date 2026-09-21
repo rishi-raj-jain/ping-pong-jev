@@ -1,0 +1,46 @@
+/* Palette and type for "Pong — Human vs Jev".
+ *
+ * Two worlds share one page: a warm, physical table-tennis table (tournament
+ * blue, wooden rails, a chalk-white center line) and Jev's cool, technical
+ * telemetry (near-black panels, a single electric accent). Keeping both as
+ * tokens lets the canvas and the DOM read from the same source of truth. */
+:root {
+  /* Page + ink */
+  --bg: #0b0f14;
+  --bg-soft: #111823;
+  --panel: #0e141c;
+  --panel-line: #1e2937;
+  --ink: #eef4fb;
+  --ink-dim: #9fb0c3;
+  --ink-faint: #61758c;
+
+  /* Jev accent (the "live" opponent) — electric cyan/green */
+  --jev: #2dd4bf;
+  --jev-strong: #14b8a6;
+  --jev-glow: rgba(45, 212, 191, 0.35);
+
+  /* Human accent — a table-tennis rubber red */
+  --human: #ef4444;
+  --human-strong: #dc2626;
+
+  /* The physical table, used by the canvas and the section chrome */
+  --table-blue: #1657a8;
+  --table-blue-dk: #0f3f7d;
+  --table-line: #eaf1fb;
+  --wood: #7a4a22;
+  --wood-dk: #5a3416;
+  --ball: #fdfdf5;
+  --ball-shadow: rgba(4, 12, 24, 0.45);
+
+  /* Confidence / status */
+  --ok: #34d399;
+  --warn: #f59e0b;
+
+  --font-ui: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', 'Cascadia Code', Menlo, Consolas, monospace;
+
+  --text-xs: 12px;
+  --text-sm: 13px;
+  --text-base: 15px;
+  --text-lg: 18px;
+}

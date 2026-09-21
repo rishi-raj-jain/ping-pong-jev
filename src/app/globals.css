@@ -1,0 +1,52 @@
+/* Dark, arcade-meets-lab styling. The table lives on a canvas; everything
+ * around it is plain DOM reading from tokens.css. */
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import '../tokens.css';
+
+html,
+body {
+  overflow-x: clip;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+body {
+  font-family: var(--font-ui);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  /* A faint dot grid so the empty page still feels like an instrument panel. */
+  background-image: radial-gradient(circle at 1px 1px, rgba(148, 163, 184, 0.06) 1px, transparent 0);
+  background-size: 22px 22px;
+}
+
+a {
+  color: var(--jev);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+*:focus-visible {
+  outline: 2px solid var(--jev);
+  outline-offset: 2px;
+}
+
+/* Tabular, monospace numerals keep the scoreboard and telemetry from jittering
+ * as values change every tick. */
+.tnum {
+  font-variant-numeric: tabular-nums;
+  font-family: var(--font-mono);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
