@@ -9,9 +9,10 @@
  * the paddle can trust the answer without validation gymnastics.
  */
 
-import { clamp, FIELD, JEV_FACE_X, type JevDecision, type JevInput } from '@/lib/pong'
+import { clamp, FIELD, JEV_FACE_X, type JevAction, type JevDecision, type JevInput } from '@/lib/pong'
 
 const JEV_URL = 'https://api.typesafe.ai/v1/systemone'
+const ACTIONS: JevAction[] = ['MOVE_UP', 'MOVE_DOWN', 'STAY']
 
 /** Error with a stable code so the route can map it to an HTTP status. */
 export class JevError extends Error {
@@ -75,23 +76,21 @@ function describe(s: JevInput): string {
   ].join(' ')
 }
 
-/**
- * Body sent to Jev — one `noul` question for the crossing height.
- *
- * Rather than a coarse up/down/stay, we ask for a single calibrated 0..1 number:
- * exactly where to put the paddle center. The paddle then homes to it, so Jev's
- * own prediction sets the position directly instead of being quantized into
- * three buckets and hunted at the loop rate.
- */
+/** Body sent to Jev — one `choice` question over the three legal moves. */
 function buildBody(s: JevInput) {
   return {
     model: 'jev-latest',
     state: describe(s),
     questions: {
-      aim: {
-        type: 'noul',
+      action: {
+        type: 'choice',
         instructions:
-          'Return the height, from 0 (the top rail) to 1 (the bottom rail), where you should place your paddle center to return the ball — that is, where the ball will actually cross your line. Anticipate its full path, folding in any bounce off the top or bottom rail before it reaches you. If the ball is moving away from you, return 0.5 to wait near the middle for its return.',
+          'Pick the single move that best lines your paddle center up with where the ball will cross your line. Be decisive: choose MOVE_UP or MOVE_DOWN whenever the predicted crossing is clearly off-center, and reserve STAY for when you are genuinely already lined up (or the ball is heading away and you are near the middle). Do not oscillate.',
+        criteria: {
+          MOVE_UP: 'the ball will cross your line ABOVE your paddle center (nearer y=0), so move up to meet it',
+          MOVE_DOWN: 'the ball will cross your line BELOW your paddle center (nearer y=1), so move down to meet it',
+          STAY: 'your paddle center is already at the predicted crossing height, or the ball is moving away and you are already near the middle',
+        },
       },
     },
   }
@@ -124,9 +123,9 @@ export async function askJev(input: JevInput): Promise<JevDecision> {
         }
         throw new Error(`Jev ${res.status}: ${(await res.text()).slice(0, 200)}`)
       }
-      const answer = (await res.json()).answers?.aim
-      const aim = clamp(Number(answer?.noul ?? 0.5), 0, 1)
-      return { aim, confidence: clamp(Number(answer?.confidence ?? 0), 0, 1), mode: 'live' }
+      const answer = (await res.json()).answers?.action
+      const action: JevAction = ACTIONS.includes(answer?.choice) ? answer.choice : 'STAY'
+      return { action, confidence: clamp(Number(answer?.confidence ?? 0), 0, 1), mode: 'live' }
     } catch (err) {
       lastErr = err
       if (attempt < 2) await sleep(300 * (attempt + 1))

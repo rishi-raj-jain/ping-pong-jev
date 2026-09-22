@@ -34,10 +34,10 @@ export default function Page() {
             Jev
           </a>{' '}
           doesn&rsquo;t write sentences. It takes unstructured state — the ball&rsquo;s position and velocity, where each paddle is — and returns one <em className="text-(--ink)">typed</em> decision:{' '}
-          <code className="rounded bg-(--bg-soft) px-1 py-0.5 text-(length:--text-sm) text-(--jev)">aim</code>, a single calibrated number from{' '}
-          <code className="rounded bg-(--bg-soft) px-1 py-0.5 text-(length:--text-sm) text-(--jev)">0</code> to <code className="rounded bg-(--bg-soft) px-1 py-0.5 text-(length:--text-sm) text-(--jev)">1</code> — exactly
-          where it expects the ball to cross its line. The paddle homes straight to it. TypeSafe says that&rsquo;s ~40–200× faster than an LLM, and it mathematically can&rsquo;t hallucinate a value out of range. So: can
-          you beat it?
+          <code className="rounded bg-(--bg-soft) px-1 py-0.5 text-(length:--text-sm) text-(--jev)">MOVE_UP</code>,{' '}
+          <code className="rounded bg-(--bg-soft) px-1 py-0.5 text-(length:--text-sm) text-(--jev)">MOVE_DOWN</code>, or{' '}
+          <code className="rounded bg-(--bg-soft) px-1 py-0.5 text-(length:--text-sm) text-(--jev)">STAY</code>. TypeSafe says that&rsquo;s ~40–200× faster than an LLM, and it mathematically can&rsquo;t hallucinate a
+          move that isn&rsquo;t on the list. So: can you beat it?
         </p>
       </section>
 
@@ -46,9 +46,9 @@ export default function Page() {
       <section className="mt-10 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <Feature
           title="State in, decision out"
-          body="Every tick, the six numbers on the right are handed to Jev. It answers with one calibrated target and a confidence — a frontier-intelligence function call inside the game loop."
+          body="Every tick, the six numbers on the right are handed to Jev. It answers with a single move and a calibrated confidence — a frontier-intelligence function call inside the game loop."
         />
-        <Feature title="No tokens to parse" body="There is no sentence to interpret and nothing to regex. The answer is a single typed number in range, so the paddle can act on it directly." />
+        <Feature title="No tokens to parse" body="There is no sentence to interpret and nothing to regex. The answer is one of exactly three typed values, so the paddle can act on it directly." />
         <Feature title="Fast enough to play" body="A System One model is built for real-time decisions. Query it dozens of times a second and the paddle just… moves. Set TYPESAFE_API_KEY to feel the live version." />
       </section>
 

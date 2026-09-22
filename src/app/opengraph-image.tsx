@@ -52,7 +52,7 @@ export default function Image() {
         <div style={{ position: 'absolute', left: 470, top: 150, width: 22, height: 22, borderRadius: 11, background: '#fdfdf5' }} />
       </div>
 
-      <div style={{ display: 'flex', marginTop: 'auto', paddingTop: 26, fontSize: 26, color: '#9fb0c3' }}>State in → one typed target out. No tokens. No hallucination. · ping-pong-jev</div>
+      <div style={{ display: 'flex', marginTop: 'auto', paddingTop: 26, fontSize: 26, color: '#9fb0c3' }}>State in → one typed move out. No tokens. No hallucination. · ping-pong-jev</div>
     </div>,
     size,
   )
