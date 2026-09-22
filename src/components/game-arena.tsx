@@ -622,29 +622,82 @@ function makePainters(ctx: CanvasRenderingContext2D) {
     ctx.restore()
   }
 
-  function paddle(cx: number, cy: number, accent: string, glow: string) {
-    const x = cx - FIELD.paddleW / 2
-    const y = cy - FIELD.paddleH / 2
+  function ellipse(cx: number, cy: number, rx: number, ry: number) {
+    ctx.beginPath()
+    ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2)
+  }
+
+  /**
+   * An actual table-tennis racket: a wooden handle, a wooden blade edge, and a
+   * shaded rubber face. `faceX` is the ball-contact line (so the rubber sits
+   * exactly where the collision happens) and `side` decides which way the
+   * handle points — outward, toward the near rail. The hit column is still the
+   * same thin logical bar; only the drawing changed.
+   */
+  function racket(faceX: number, cy: number, side: 'left' | 'right', rubber: string, glow: string) {
+    const out = side === 'left' ? -1 : 1 // direction the handle points
+    const bRx = 22
+    const bRy = 52
+    const rim = 4
+    const cx = faceX + out * (bRx - 2) // blade center; inner rubber edge lands on faceX
+
     ctx.save()
+
+    // Contact shadow on the table, offset toward the light.
+    ctx.fillStyle = 'rgba(4,12,24,0.22)'
+    ellipse(cx + 6, cy + 9, bRx, bRy)
+    ctx.fill()
+
+    // Handle (behind the blade), a rounded wooden grip flaring into the neck.
+    const hW = 19
+    const hLen = 30
+    const hStart = cx + out * (bRx - 6)
+    const hEnd = cx + out * (bRx + hLen)
+    const hx = Math.min(hStart, hEnd)
+    const hw = Math.abs(hEnd - hStart)
+    const hg = ctx.createLinearGradient(hx, cy - hW / 2, hx, cy + hW / 2)
+    hg.addColorStop(0, '#9c6a38')
+    hg.addColorStop(0.5, '#6b4320')
+    hg.addColorStop(1, '#4a2f15')
+    ctx.fillStyle = hg
+    roundRect(hx, cy - hW / 2, hw, hW, 7)
+    ctx.fill()
+    ctx.strokeStyle = 'rgba(0,0,0,0.28)'
+    ctx.lineWidth = 1
+    roundRect(hx, cy - hW / 2, hw, hW, 7)
+    ctx.stroke()
+
+    // Wooden blade backing (a thin edge shows around the rubber), with glow.
     ctx.shadowColor = glow
-    ctx.shadowBlur = 20
-    const g = ctx.createLinearGradient(x, y, x + FIELD.paddleW, y)
-    g.addColorStop(0, accent)
-    g.addColorStop(0.5, shade(accent, 1.15))
-    g.addColorStop(1, shade(accent, 0.7))
-    ctx.fillStyle = g
-    roundRect(x, y, FIELD.paddleW, FIELD.paddleH, 8)
+    ctx.shadowBlur = 22
+    const wg = ctx.createLinearGradient(cx, cy - bRy, cx, cy + bRy)
+    wg.addColorStop(0, '#d29a55')
+    wg.addColorStop(1, '#8a5a2e')
+    ctx.fillStyle = wg
+    ellipse(cx, cy, bRx, bRy)
     ctx.fill()
     ctx.shadowBlur = 0
-    // Glossy vertical highlight.
-    ctx.fillStyle = 'rgba(255,255,255,0.25)'
-    roundRect(x + 2.5, y + 4, FIELD.paddleW * 0.34, FIELD.paddleH - 8, 6)
+
+    // Rubber face — matte with a soft center sheen.
+    const rr = ctx.createRadialGradient(cx - out * 4, cy - 12, 3, cx, cy, bRy)
+    rr.addColorStop(0, shade(rubber, 1.2))
+    rr.addColorStop(0.55, rubber)
+    rr.addColorStop(1, shade(rubber, 0.72))
+    ctx.fillStyle = rr
+    ellipse(cx, cy, bRx - rim, bRy - rim)
     ctx.fill()
-    // Dark rim.
-    ctx.strokeStyle = 'rgba(0,0,0,0.25)'
+
+    // Specular highlight near the top of the face.
+    ctx.fillStyle = 'rgba(255,255,255,0.20)'
+    ellipse(cx - out * 5, cy - bRy * 0.42, (bRx - rim) * 0.5, (bRy - rim) * 0.26)
+    ctx.fill()
+
+    // Rim line on the rubber.
+    ctx.strokeStyle = 'rgba(0,0,0,0.22)'
     ctx.lineWidth = 1
-    roundRect(x, y, FIELD.paddleW, FIELD.paddleH, 8)
+    ellipse(cx, cy, bRx - rim, bRy - rim)
     ctx.stroke()
+
     ctx.restore()
   }
 
@@ -668,8 +721,8 @@ function makePainters(ctx: CanvasRenderingContext2D) {
       ballShadow(e.ball)
       trail(e.trail)
     }
-    paddle(FIELD.paddleInset + FIELD.paddleW / 2, e.humanY, '#ef4444', 'rgba(239,68,68,0.5)')
-    paddle(JEV_FACE_X + FIELD.paddleW / 2, e.jevY, '#2dd4bf', 'rgba(45,212,191,0.55)')
+    racket(HUMAN_FACE_X, e.humanY, 'left', '#ef4444', 'rgba(239,68,68,0.5)')
+    racket(JEV_FACE_X, e.jevY, 'right', '#2dd4bf', 'rgba(45,212,191,0.55)')
     particles(e.particles)
     if (e.status !== 'idle') ball(e.ball)
 
