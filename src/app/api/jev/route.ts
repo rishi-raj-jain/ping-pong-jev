@@ -14,7 +14,8 @@
 import { askJev, JevError } from '@/lib/jev'
 import type { JevInput } from '@/lib/pong'
 
-// Decisions depend entirely on the posted body, so never cache or prerender.
+export const maxDuration = 300
+export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 function coord(v: unknown): number {
