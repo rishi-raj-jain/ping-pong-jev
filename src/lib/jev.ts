@@ -9,7 +9,7 @@
  * the paddle can trust the answer without validation gymnastics.
  */
 
-import { clamp, type JevAction, type JevDecision, type JevInput } from '@/lib/pong'
+import { clamp, FIELD, JEV_FACE_X, type JevAction, type JevDecision, type JevInput } from '@/lib/pong'
 
 const JEV_URL = 'https://api.typesafe.ai/v1/systemone'
 const ACTIONS: JevAction[] = ['MOVE_UP', 'MOVE_DOWN', 'STAY']
@@ -36,19 +36,43 @@ function jevKey(): string {
 const r2 = (n: number) => Math.round(n * 100) / 100
 
 /**
- * Describe the current tick to Jev the way a human commentator would: the ball,
- * its heading, and where both paddles sit — all normalized, all in one short
- * paragraph. Jev reads this "unstructured state" and returns the typed move.
+ * Describe the current tick to Jev.
+ *
+ * We give it more than the six raw numbers: we also reframe them the way the
+ * decision actually wants them — the vertical GAP between the ball and Jev's own
+ * paddle, whether the ball is approaching, and roughly how long until it arrives
+ * — and we spell out the field's physics (the ball reflects off the top and
+ * bottom rails; Jev can only move up or down). Every one of these is a one-step
+ * consequence of the inputs, so it is context, not the answer: we deliberately
+ * do NOT fold the wall bounces and hand over the final crossing height — working
+ * out where the ball actually arrives is the judgment we want from Jev.
  */
 function describe(s: JevInput): string {
-  const xdir = s.ballVX > 0 ? 'toward YOU (moving right)' : s.ballVX < 0 ? 'toward the opponent (moving left)' : 'flat'
-  const ydir = s.ballVY > 0.02 ? 'and downward' : s.ballVY < -0.02 ? 'and upward' : 'and level'
+  const xdir = s.ballVX > 0.0001 ? 'toward YOU, the right paddle (moving right)' : s.ballVX < -0.0001 ? 'toward the opponent (moving left)' : 'not horizontally'
+  const ydir = s.ballVY > 0.02 ? 'downward (toward the bottom rail)' : s.ballVY < -0.02 ? 'upward (toward the top rail)' : 'level'
+
+  const gap = s.ballY - s.paddleY // + => ball is below your center, - => above
+  const side =
+    Math.abs(gap) < 0.02
+      ? 'almost exactly level with your paddle center'
+      : gap > 0
+        ? `${r2(Math.abs(gap))} BELOW your paddle center (nearer the bottom, y=1)`
+        : `${r2(Math.abs(gap))} ABOVE your paddle center (nearer the top, y=0)`
+
+  let arrival: string
+  if (s.ballVX > 0.0001) {
+    const t = (JEV_FACE_X / FIELD.w - s.ballX) / s.ballVX // seconds until it reaches your line
+    arrival = `It is approaching your side and, ignoring rail bounces, would reach your line in about ${r2(Math.max(0, t))} seconds.`
+  } else {
+    arrival = 'It is moving away from you; you have time to recover toward the middle before it comes back.'
+  }
+
   return [
-    'You are the RIGHT paddle in a game of Pong. Coordinates are normalized: 0 is the top/left edge, 1 is the bottom/right edge.',
-    `Ball position: x=${r2(s.ballX)}, y=${r2(s.ballY)}.`,
-    `Ball velocity: vx=${r2(s.ballVX)} (${xdir}), vy=${r2(s.ballVY)} (${ydir}).`,
-    `Your paddle center is at y=${r2(s.paddleY)}. The opponent paddle center is at y=${r2(s.opponentY)}.`,
-    'Goal: position your paddle to return the ball and, when you can, aim it away from the opponent.',
+    'You are the RIGHT paddle in Pong. Coordinates are normalized 0..1: x runs left (0) to right (1); y runs top (0) to bottom (1). You may only move your paddle UP (toward y=0) or DOWN (toward y=1). The ball reflects off the top rail (y=0) and the bottom rail (y=1) — it never wraps around.',
+    `Ball position: x=${r2(s.ballX)}, y=${r2(s.ballY)}. Ball velocity: vx=${r2(s.ballVX)}, vy=${r2(s.ballVY)} — it is heading ${xdir}, and ${ydir}.`,
+    `Your paddle center is at y=${r2(s.paddleY)}; the opponent's is at y=${r2(s.opponentY)}. Right now the ball is ${side}.`,
+    arrival,
+    'Aim your paddle center at the height where the ball will actually cross your line — anticipate its path, folding in any bounce off the top or bottom rail before it gets to you, rather than just chasing its current height.',
   ].join(' ')
 }
 
@@ -60,11 +84,12 @@ function buildBody(s: JevInput) {
     questions: {
       action: {
         type: 'choice',
-        instructions: 'Choose how to move your paddle THIS tick to best defend your goal and return the ball.',
+        instructions:
+          'Pick the single move that best lines your paddle center up with where the ball will cross your line. Be decisive: choose MOVE_UP or MOVE_DOWN whenever the predicted crossing is clearly off-center, and reserve STAY for when you are genuinely already lined up (or the ball is heading away and you are near the middle). Do not oscillate.',
         criteria: {
-          MOVE_UP: 'move the paddle up, toward y=0, because the ball will arrive above the paddle center',
-          MOVE_DOWN: 'move the paddle down, toward y=1, because the ball will arrive below the paddle center',
-          STAY: 'hold position because the paddle is already lined up, or the ball is heading away',
+          MOVE_UP: 'the ball will cross your line ABOVE your paddle center (nearer y=0), so move up to meet it',
+          MOVE_DOWN: 'the ball will cross your line BELOW your paddle center (nearer y=1), so move down to meet it',
+          STAY: 'your paddle center is already at the predicted crossing height, or the ball is moving away and you are already near the middle',
         },
       },
     },
