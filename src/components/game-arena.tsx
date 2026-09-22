@@ -13,7 +13,7 @@
 
 import { Scoreboard } from '@/components/scoreboard'
 import { TelemetryPanel } from '@/components/telemetry-panel'
-import { clamp, decideLocally, FIELD, HUMAN_FACE_X, JEV_FACE_X, type JevAction, type JevDecision, type JevInput, type JevMode } from '@/lib/pong'
+import { clamp, decideLocally, FIELD, HUMAN_FACE_X, JEV_FACE_X, type JevDecision, type JevInput, type JevMode } from '@/lib/pong'
 import { useEffect, useRef, useState } from 'react'
 
 type Status = 'idle' | 'serving' | 'playing' | 'over'
@@ -29,7 +29,7 @@ type Engine = {
   jevScore: number
   status: Status
   serveDir: 1 | -1
-  action: JevAction
+  aim: number // 0..1 target height Jev wants the paddle center at
   rally: number
   winner: 'human' | 'jev' | null
   trail: { x: number; y: number }[]
@@ -66,7 +66,7 @@ function newEngine(): Engine {
     jevScore: 0,
     status: 'idle',
     serveDir: Math.random() < 0.5 ? -1 : 1,
-    action: 'STAY',
+    aim: 0.5,
     rally: 0,
     winner: null,
     trail: [],
@@ -183,8 +183,12 @@ export function GameArena() {
       }
 
       // Jev paddle: follow the last typed decision.
-      if (e.action === 'MOVE_UP') e.jevY = clamp(e.jevY - JEV_SPEED * dt, TOP, BOTTOM)
-      else if (e.action === 'MOVE_DOWN') e.jevY = clamp(e.jevY + JEV_SPEED * dt, TOP, BOTTOM)
+      // Jev paddle: home toward the target height it returned, capped at its
+      // top speed. It stops when lined up (no overshoot, no oscillation); a
+      // fast, sharply angled return can still outrun the cap and score.
+      const targetY = clamp(e.aim * FIELD.h, TOP, BOTTOM)
+      const stepMax = JEV_SPEED * dt
+      e.jevY = clamp(e.jevY + clamp(targetY - e.jevY, -stepMax, stepMax), TOP, BOTTOM)
 
       if (e.shake > 0) e.shake = Math.max(0, e.shake - dt * 40)
 
@@ -332,7 +336,7 @@ export function GameArena() {
             }
           }
 
-          e.action = dec.action
+          e.aim = dec.aim
 
           const now = performance.now()
           if (now - lastPublish > 90) {

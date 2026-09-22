@@ -4,18 +4,21 @@ Classic Pong where the **left paddle is you** and the **right paddle is [Jev](ht
 
 Jev isn't a chatbot. It's a _System One_ model: unstructured state in, a typed
 decision out. Here it plays Pong. Every tick it receives the ball's position and
-velocity and both paddle positions — all normalized to `0..1` — and returns one
-of exactly three moves:
+velocity and both paddle positions — all normalized to `0..1` — and returns a
+single calibrated number: `aim`, the height where it predicts the ball will
+cross its line. The paddle homes straight to it.
 
 ```
 ball position       ->
-ball velocity       ->   Jev   ->   MOVE_UP | MOVE_DOWN | STAY
+ball velocity       ->   Jev   ->   aim ∈ [0, 1]  (where to meet the ball)
 paddle position     ->
 opponent position   ->
 ```
 
 There are no tokens to parse and, per TypeSafe, no way for the model to answer
-outside the choice set — so the paddle acts on the answer directly.
+outside the valid range — so the paddle acts on the answer directly. Asking Jev
+for a precise target (rather than a coarse up/down/stay) is what lets the paddle
+position exactly instead of hunting around the ball.
 
 ## Playing
 
@@ -26,7 +29,7 @@ outside the choice set — so the paddle acts on the answer directly.
 ## Live Jev vs. local reflex
 
 The right paddle's brain lives behind `POST /api/jev`, which forwards the
-normalized state to TypeSafe and returns the typed move.
+normalized state to TypeSafe and returns the typed `aim` target.
 
 - **With `TYPESAFE_API_KEY` set**, you play against **live Jev** and the
   decision feed shows the real latency. Tick "compare local reflex" to A/B it.

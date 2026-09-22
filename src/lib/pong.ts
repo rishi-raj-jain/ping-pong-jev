@@ -10,9 +10,6 @@
  * the game keep playing when live Jev is not configured.
  */
 
-/** The three moves Jev may return for the right paddle, per the prompt in the brief. */
-export type JevAction = 'MOVE_UP' | 'MOVE_DOWN' | 'STAY'
-
 /** Where a decision came from, so the UI can label the opponent honestly. */
 export type JevMode = 'live' | 'local'
 
@@ -32,9 +29,14 @@ export type JevInput = {
   opponentY: number // the human paddle, center, 0..1
 }
 
-/** A typed judgment of the current tick: the move plus how sure of it we are. */
+/**
+ * A typed judgment of the current tick. Instead of a coarse up/down/stay,
+ * Jev returns `aim`: the height (0 = top rail, 1 = bottom rail) where it
+ * predicts the ball will cross its line, so the paddle can home straight to
+ * that point instead of hunting around it.
+ */
 export type JevDecision = {
-  action: JevAction
+  aim: number // 0..1 predicted crossing height / where to place the paddle center
   confidence: number // 0..1
   mode: JevMode
 }
@@ -91,25 +93,14 @@ export function predictImpactY(s: JevInput): number {
 
 /**
  * Local reflex opponent: the same typed decision Jev returns, computed with no
- * network. It aims the paddle at the predicted impact point with a small
- * dead-zone (so it does not jitter on the spot) and reports a confidence that
- * grows as the ball nears and the aim tightens — enough to make the telemetry
- * feel alive, and imperfect enough that a human can win.
+ * network. It returns the predicted crossing height as `aim` and a confidence
+ * that grows as the ball nears — enough to make the telemetry feel alive, while
+ * the paddle's capped speed still leaves sharp, angled returns unreachable so a
+ * human can win.
  */
 export function decideLocally(s: JevInput): JevDecision {
-  const target = predictImpactY(s)
-  const error = target - s.paddleY // + means target is below the paddle
-  const dead = 0.035
-
-  let action: JevAction = 'STAY'
-  if (error > dead) action = 'MOVE_DOWN'
-  else if (error < -dead) action = 'MOVE_UP'
-
-  // More confident when the ball is close (small horizontal gap) and the aim is
-  // already tight. Idle waiting near center reads as a calm, low-mid confidence.
-  const closeness = s.ballVX > 0 ? clamp(1 - Math.abs(JEV_FACE_X / FIELD.w - s.ballX), 0, 1) : 0.4
-  const tightness = clamp(1 - Math.abs(error) * 3, 0, 1)
-  const confidence = action === 'STAY' ? clamp(0.55 + tightness * 0.4, 0, 0.99) : clamp(0.45 + closeness * 0.35 + tightness * 0.2, 0, 0.99)
-
-  return { action, confidence, mode: 'local' }
+  const aim = predictImpactY(s)
+  const closeness = s.ballVX > 0 ? clamp(1 - Math.abs(JEV_FACE_X / FIELD.w - s.ballX), 0, 1) : 0.35
+  const confidence = clamp(0.5 + closeness * 0.49, 0, 0.99)
+  return { aim, confidence, mode: 'local' }
 }
